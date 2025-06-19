@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, Users, DollarSign, Target, PiggyBank, MousePointerClick, Pencil } from 'lucide-react'
+import { TrendingUp, Users, DollarSign, Target, PiggyBank } from 'lucide-react'
 import type { KPIData } from '@/lib/mock-data'
 
 interface KPICardsProps {
@@ -13,16 +13,16 @@ export function KPICards({ data }: KPICardsProps) {
   const kpis = [
     {
       title: 'Total Deposits',
-      value: `$${(data.totalDeposits || 0).toLocaleString()}`,
+      value: `$${data.totalDeposits.toLocaleString()}`,
       icon: PiggyBank,
       description: 'Total deposits from referrals',
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      change: `${data.depositChange >= 0 ? '+' : ''}${(data.depositChange || 0).toFixed(1)}%`
+      change: `${data.depositChange >= 0 ? '+' : ''}${data.depositChange.toFixed(1)}%`
     },
     {
       title: 'CPAs',
-      value: (data.cpas || 0).toString(),
+      value: data.cpas.toString(),
       icon: Target,
       description: 'Cost Per Acquisition conversions',
       color: 'text-green-600',
@@ -31,7 +31,7 @@ export function KPICards({ data }: KPICardsProps) {
     },
     {
       title: 'FTDs',
-      value: (data.ftds || 0).toString(),
+      value: data.ftds.toString(),
       icon: Users,
       description: 'First Time Deposits',
       color: 'text-indigo-600',
@@ -40,7 +40,7 @@ export function KPICards({ data }: KPICardsProps) {
     },
     {
       title: 'RevShare',
-      value: `${(data.revShare || 0).toFixed(1)}%`,
+      value: `${data.revShare.toFixed(1)}%`,
       icon: TrendingUp,
       description: 'Revenue share percentage',
       color: 'text-purple-600',
@@ -49,37 +49,13 @@ export function KPICards({ data }: KPICardsProps) {
     },
     {
       title: 'Est. Commission',
-      value: `$${(data.estimatedCommission || 0).toLocaleString()}`,
+      value: `$${data.estimatedCommission.toLocaleString()}`,
       icon: DollarSign,
       description: 'Estimated commission earned',
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
       change: ''
-    },
-    // 👇 Adicionais com verificação
-    ...(typeof data.registros === 'number'
-      ? [{
-          title: 'Registros',
-          value: data.registros.toString(),
-          icon: Pencil,
-          description: 'Usuários registrados',
-          color: 'text-teal-600',
-          bgColor: 'bg-teal-50',
-          change: ''
-        }]
-      : []),
-
-    ...(typeof data.cliques === 'number'
-      ? [{
-          title: 'Cliques',
-          value: data.cliques.toString(),
-          icon: MousePointerClick,
-          description: 'Cliques gerados',
-          color: 'text-amber-600',
-          bgColor: 'bg-amber-50',
-          change: ''
-        }]
-      : [])
+    }
   ]
 
   return (

@@ -1,40 +1,120 @@
+
 'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LoginForm } from '@/components/auth/login-form'
+import { DashboardHeader } from '@/components/dashboard/header'
+import { KPICards } from '@/components/dashboard/kpi-cards'
+import { DepositsChart } from '@/components/dashboard/deposits-chart'
+import { UsersTable } from '@/components/dashboard/users-table'
+import { DateFilter } from '@/components/dashboard/date-filter'
+import { DateRange } from 'react-day-picker'
+import { getFilteredDashboardData } from '@/lib/filter-utils'
 
-export default function HomePage() {
+interface Deposit {
+  date: string
+  amount: number
+  id: number
+}
+
+interface KPIData {
+  totalDeposits: number
+  ftds: number
+  cpas: number
+  revShare: number
+  estimatedCommission: number
+  depositChange: number
+}
+
+interface AffiliateData {
+  dailyDeposits: Deposit[]
+  referredUsers: any[]
+}
+
+export default function DashboardPage() {
+  const [userEmail, setUserEmail] = useState('')
+  const [userId, setUserId] = useState<string | null>(null)
+  const [rawData, setRawData] = useState<AffiliateData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [dateRange, setDateRange] = useState<'week' | 'month' | 'custom'>('week')
+  const [customRange, setCustomRange] = useState<DateRange | undefined>()
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user is already logged in
     const session = localStorage.getItem('affiliate_session')
-    if (session) {
-      try {
-        const sessionData = JSON.parse(session)
-        if (sessionData.expires > Date.now()) {
-          router.push('/dashboard')
-          return
-        } else {
-          localStorage.removeItem('affiliate_session')
-        }
-      } catch (error) {
-        localStorage.removeItem('affiliate_session')
-      }
+    if (!session) {
+      router.push('/')
+      return
     }
-    setIsLoading(false)
+
+    try {
+      const sessionData = JSON.parse(session)
+      if (sessionData.expires <= Date.now()) {
+        localStorage.removeItem('affiliate_session')
+        router.push('/')
+        return
+      }
+
+      setUserEmail(sessionData.user.email)
+      setUserId(sessionData.user.id) // usado para identificar o deal
+      fetchDashboardData(sessionData.user.btag)
+    } catch (error) {
+      localStorage.removeItem('affiliate_session')
+      router.push('/')
+    }
   }, [router])
 
-  if (isLoading) {
+  const fetchDashboardData = async (btag: string) => {
+    try {
+      const res = await fetch('/api/get-dashboard-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ btag })
+      })
+
+      const data = await res.json()
+      setRawData({ dailyDeposits: data.deposits, referredUsers: data.referredUsers })
+      setIsLoading(false)
+    } catch (err) {
+      console.error('Erro ao buscar dados do dashboard:', err)
+      setIsLoading(false)
+    }
+  }
+
+  const filteredData = rawData && userId
+    ? getFilteredDashboardData(rawData, dateRange, customRange?.from, customRange?.to, userId)
+    : null
+
+  if (isLoading || !filteredData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <DashboardHeader userEmail={userEmail} />
 
-  return <LoginForm />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Performance Overview</h2>
+          <p className="text-gray-600">Track your affiliate performance and commission earnings</p>
+        </div>
+
+        <DateFilter
+          selectedRange={dateRange}
+          onRangeChange={setDateRange}
+          customRange={customRange}
+          onCustomRangeChange={setCustomRange}
+        />
+
+        <KPICards data={filteredData.kpi} />
+        <DepositsChart data={filteredData.deposits} />
+        <UsersTable data={filteredData.referredUsers} />
+      </main>
+    </div>
+  )
 }
+
