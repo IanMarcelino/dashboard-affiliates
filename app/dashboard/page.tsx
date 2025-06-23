@@ -8,10 +8,20 @@ import { DepositsChart } from '@/components/dashboard/deposits-chart'
 import { UsersTable } from '@/components/dashboard/users-table'
 import { DateFilter } from '@/components/dashboard/date-filter'
 import { DateRange } from 'react-day-picker'
-import { getFilteredData } from '@/lib/mock-data' // sua função de filtragem mock
-import { mockAffiliateData } from '@/lib/mock-data' // seus dados mockados
+import { getFilteredDashboardData } from '@/lib/filter-utils'
 
-import type { AffiliateData, KPIData, DailyDeposit, ReferredUser } from '@/lib/mock-data'
+interface Deposit {
+  date: string
+  amount: number
+  id: number
+  rev?: number
+  cpa?: number
+}
+
+interface AffiliateData {
+  dailyDeposits: Deposit[]
+  referredUsers: any[]
+}
 
 export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState('')
@@ -24,15 +34,22 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const session = localStorage.getItem('affiliate_session')
-    if (!session) {
+    const token = localStorage.getItem('token')
+
+    console.log('filteredData:', filteredData)
+    console.log('rawData:', rawData)
+    console.log('userId:', userId)
+    if (!session || !token) {
       router.push('/')
       return
     }
 
     try {
       const sessionData = JSON.parse(session)
+
       if (sessionData.expires <= Date.now()) {
         localStorage.removeItem('affiliate_session')
+        localStorage.removeItem('token')
         router.push('/')
         return
       }
@@ -40,22 +57,36 @@ export default function DashboardPage() {
       setUserEmail(sessionData.user.email)
       setUserId(sessionData.user.id)
 
-      // ✅ Usando mock direto
-      setRawData(mockAffiliateData)
-      setIsLoading(false)
+      fetchDashboardData(token)
     } catch (error) {
       localStorage.removeItem('affiliate_session')
+      localStorage.removeItem('token')
       router.push('/')
     }
   }, [router])
 
-  const filteredData = rawData
-    ? getFilteredData(
-        rawData,
-        dateRange,
-        customRange?.from,
-        customRange?.to
-      )
+  const fetchDashboardData = async (token: string) => {
+    try {
+      const res = await fetch('/api/get-dashboard-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      const data = await res.json()
+      console.log('🔎 Dados recebidos do backend:', data)
+      setRawData({ dailyDeposits: data.deposits, referredUsers: data.referredUsers })
+      setIsLoading(false)
+    } catch (err) {
+      console.error('Erro ao buscar dados do dashboard:', err)
+      setIsLoading(false)
+    }
+  }
+
+  const filteredData = rawData && userId
+    ? getFilteredDashboardData(rawData, dateRange, customRange?.from, customRange?.to)
     : null
 
   if (isLoading || !filteredData) {
@@ -83,8 +114,8 @@ export default function DashboardPage() {
           onCustomRangeChange={setCustomRange}
         />
 
-        <KPICards data={filteredData.kpis!} />
-        <DepositsChart data={filteredData.dailyDeposits} />
+        <KPICards data={filteredData.kpi} />
+        <DepositsChart data={filteredData.deposits} />
         <UsersTable data={filteredData.referredUsers} />
       </main>
     </div>

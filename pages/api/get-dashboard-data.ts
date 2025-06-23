@@ -1,16 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '@supabase/supabase-js'
-
-// 🔐 Supabase setup (lembre-se: SERVICE ROLE no backend)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { supabaseAdmin } from '@/lib/supabase-backend'
 
 const NOTION_TOKEN = process.env.NOTION_TOKEN!
 const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID!
 
-// ✅ Tipo completo com todos os campos da planilha
 type Deposit = {
   date: string
   btag: string
@@ -25,6 +18,7 @@ type Deposit = {
   deductions: number
   deposits: number
   depositsAmount: number
+  amount: number // ✅ Adicionado para o gráfico
   ftdToLeadPercent: number
   ftds: number
   ftdsAmount: number
@@ -38,6 +32,7 @@ type Deposit = {
   volume: number
   withdrawals: number
   withdrawalsAmount: number
+  estimatedCommission: number
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -52,11 +47,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Token não fornecido' })
   }
 
-  // ✅ Autentica o usuário
   const {
     data: { user },
     error: userError
-  } = await supabase.auth.getUser(token)
+  } = await supabaseAdmin.auth.getUser(token)
 
   if (userError || !user) {
     return res.status(401).json({ error: 'Usuário não autenticado' })
@@ -64,8 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const userId = user.id
 
-  // ✅ Busca btags associadas ao usuário
-  const { data: btags, error: btagError } = await supabase
+  const { data: btags, error: btagError } = await supabaseAdmin
     .from('user')
     .select('btag')
     .eq('user_id', userId)
@@ -75,7 +68,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const btagList = btags.map(b => b.btag).filter(Boolean)
-
   const deposits: Deposit[] = []
 
   for (const btag of btagList) {
@@ -98,36 +90,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const notionData = await notionRes.json()
 
-    const mappedDeposits: Deposit[] = notionData.results
-      .map((item: any): Deposit => ({
+    const mappedDeposits: Deposit[] = notionData.results.map((item: any): Deposit => {
+      const get = (key: string) => item.properties[key]?.number ?? 0
+
+      const cpa = get('CPA')
+      const ftds = get('FTDs')
+      const netPL = get('Net P&L')
+      const revPercent = get('RevShare') // formato percentual
+
+      const valorCPA = 25
+      const valorFTD = 30
+
+      const estimatedCommission = (cpa * valorCPA) + (ftds * valorFTD) + (netPL * (revPercent / 100))
+
+      const depositsAmount = get('Deposits amount')
+
+      return {
         date: item.properties['Date/Hora']?.date?.start || '',
         btag,
-        activitiesCount: item.properties['Activities count']?.number ?? 0,
-        adjustments: item.properties['Adjustments']?.number ?? 0,
-        balance: item.properties['Balance']?.number ?? 0,
-        bonusAmount: item.properties['Bonus amount']?.number ?? 0,
-        cpa: item.properties['CPA']?.number ?? 0,
-        chargebacks: item.properties['Chargebacks']?.number ?? 0,
-        commissionFromSubAff: item.properties['Commission from Sub Aff']?.number ?? 0,
-        commissions: item.properties['Commissions']?.number ?? 0,
-        deductions: item.properties['Deductions']?.number ?? 0,
-        deposits: item.properties['Deposits']?.number ?? 0,
-        depositsAmount: item.properties['Deposits amount']?.number ?? 0,
-        ftdToLeadPercent: item.properties['FTD to Lead %']?.number ?? 0,
-        ftds: item.properties['FTDs']?.number ?? 0,
-        ftdsAmount: item.properties['FTDs amount']?.number ?? 0,
-        netDeposits: item.properties['Net Deposits']?.number ?? 0,
-        netPL: item.properties['Net P&L']?.number ?? 0,
-        payments: item.properties['Payments']?.number ?? 0,
-        qftdsCpa: item.properties['QFTDs CPA']?.number ?? 0,
-        registrations: item.properties['Registrations']?.number ?? 0,
-        revShare: item.properties['RevShare']?.number ?? 0,
-        visitsUnique: item.properties['Visits (unique)']?.number ?? 0,
-        volume: item.properties['Volume']?.number ?? 0,
-        withdrawals: item.properties['Withdrawals']?.number ?? 0,
-        withdrawalsAmount: item.properties['Withdrawals amount']?.number ?? 0
-      }))
-      .filter((dep: Deposit) => dep.depositsAmount > 0 && dep.date)
+        activitiesCount: get('Activities count'),
+        adjustments: get('Adjustments'),
+        balance: get('Balance'),
+        bonusAmount: get('Bonus amount'),
+        cpa: get('CPA'),
+        chargebacks: get('Chargebacks'),
+        commissionFromSubAff: get('Commission from Sub Aff'),
+        commissions: get('Commissions'),
+        deductions: get('Deductions'),
+        deposits: get('Deposits'),
+        depositsAmount,
+        amount: depositsAmount, // ✅ Aqui está o novo campo
+        ftdToLeadPercent: get('FTD to Lead %'),
+        ftds: get ('FTDs'),
+        ftdsAmount: get('FTDs amount'),
+        netDeposits: get('Net Deposits'),
+        netPL,
+        payments: get('Payments'),
+        qftdsCpa: get('QFTDs CPA'),
+        registrations: get('Registrations'),
+        revShare: get('RevShare'),
+        visitsUnique: get('Visits (unique)'),
+        volume: get('Volume'),
+        withdrawals: get('Withdrawals'),
+        withdrawalsAmount: get('Withdrawals amount'),
+        estimatedCommission
+      }
+    }).filter((dep: Deposit) => dep.depositsAmount > 0 && dep.date)
 
     deposits.push(...mappedDeposits)
   }

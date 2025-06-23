@@ -1,5 +1,5 @@
 import { subDays } from 'date-fns'
-import type { AffiliateData, KPIData, DailyDeposit, ReferredUser } from '@/lib/mock-data'
+import type { AffiliateData, KPIData } from '@/lib/mock-data'
 
 export function getFilteredDashboardData(
   raw: AffiliateData,
@@ -8,34 +8,75 @@ export function getFilteredDashboardData(
   to?: Date
 ): {
   kpi: KPIData
-  deposits: DailyDeposit[]
-  referredUsers: ReferredUser[]
+  deposits: typeof raw.dailyDeposits
+  referredUsers: typeof raw.referredUsers
 } {
   const now = new Date()
 
+  // ✅ Proteção contra dados inválidos
+  if (
+    !raw ||
+    !Array.isArray(raw.dailyDeposits) ||
+    !Array.isArray(raw.referredUsers)
+  ) {
+    return {
+      kpi: {
+        totalDeposits: 0,
+        ftds: 0,
+        cpas: 0,
+        estimatedCommission: 0,
+        revShare: 0,
+        depositChange: 0
+      },
+      deposits: [],
+      referredUsers: []
+    }
+  }
+
   const start =
-    range === 'week'
-      ? subDays(now, 7)
-      : range === 'month'
-      ? subDays(now, 30)
-      : from || subDays(now, 7)
+    range === 'week' ? subDays(now, 7)
+      : range === 'month' ? subDays(now, 30)
+        : from || subDays(now, 7)
 
   const end = to || now
 
-  const filteredDeposits = raw.dailyDeposits.filter((dep: DailyDeposit) => {
+  // 🔎 Filtrando depósitos atuais e anteriores
+  const filteredDeposits = raw.dailyDeposits.filter(dep => {
     const date = new Date(dep.date)
     return date >= start && date <= end
   })
 
-  const filteredUsers = raw.referredUsers.filter((user: ReferredUser) => {
-    const date = new Date(user.joinDate)
-    return date >= start && date <= end
+  const previousStart = subDays(start, (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+  const previousEnd = start
+
+  const previousDeposits = raw.dailyDeposits.filter(dep => {
+    const date = new Date(dep.date)
+    return date >= previousStart && date < previousEnd
   })
 
-  // usa kpis direto do mock
+  // ✅ Somando valores com segurança contra null/undefined
+  const total = filteredDeposits.reduce((sum, d) => sum + (Number(d.amount) || 0), 0)
+  const previousTotal = previousDeposits.reduce((sum, d) => sum + (Number(d.amount) || 0), 0)
+  const change = previousTotal > 0 ? ((total - previousTotal) / previousTotal) * 100 : 0
+
+  const totalFtd = filteredDeposits.reduce((sum, d) => sum + (Number((d as any).ftds) || 0), 0) // 🔁 Corrigido: ftds com 's'
+  const totalCpa = filteredDeposits.reduce((sum, d) => sum + (Number(d.cpa) || 0), 0)
+  const totalRev = filteredDeposits.reduce((sum, d) => sum + (Number(d.rev) || 0), 0)
+  const estimatedCommission = filteredDeposits.reduce((sum, d) => sum + (Number(d.estimatedCommission) || 0), 0)
+
+  // ✅ Construindo o objeto final de KPIs
+  const kpi: KPIData = {
+    totalDeposits: total,
+    ftds: totalFtd,
+    cpas: totalCpa,
+    estimatedCommission,
+    revShare: totalRev,
+    depositChange: change
+  }
+
   return {
-    kpi: raw.kpis!, // confia que está presente no mock
+    kpi,
     deposits: filteredDeposits,
-    referredUsers: filteredUsers
+    referredUsers: raw.referredUsers
   }
 }

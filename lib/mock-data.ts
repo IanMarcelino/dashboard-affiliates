@@ -19,6 +19,7 @@ export interface DailyDeposit {
   ftd?: number
   cpa?: number
   rev?: number
+  estimatedCommission?: number // Calculado manualmente
 }
 
 export interface ReferredUser {

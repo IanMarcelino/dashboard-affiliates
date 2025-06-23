@@ -1,8 +1,23 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts'
 import type { DailyDeposit } from '@/lib/mock-data'
+import type { TooltipProps } from 'recharts'
 
 interface DepositsChartProps {
   data: DailyDeposit[]
@@ -11,16 +26,19 @@ interface DepositsChartProps {
 export function DepositsChart({ data }: DepositsChartProps) {
   const formattedData = data.map(item => ({
     ...item,
-    formattedDate: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    formattedDate: new Date(item.date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    })
   }))
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="text-sm font-medium text-gray-900">{`Date: ${label}`}</p>
           <p className="text-sm text-blue-600">
-            {`Deposits: $${payload[0].value.toLocaleString()}`}
+            {`Deposits: $${(payload[0]?.value ?? 0).toLocaleString()}`}
           </p>
         </div>
       )
@@ -41,14 +59,14 @@ export function DepositsChart({ data }: DepositsChartProps) {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={formattedData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="formattedDate" 
+              <XAxis
+                dataKey="formattedDate"
                 stroke="#6b7280"
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
               />
-              <YAxis 
+              <YAxis
                 stroke="#6b7280"
                 fontSize={12}
                 tickLine={false}
@@ -56,8 +74,8 @@ export function DepositsChart({ data }: DepositsChartProps) {
                 tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Bar 
-                dataKey="amount" 
+              <Bar
+                dataKey="amount"
                 fill="#3b82f6"
                 radius={[4, 4, 0, 0]}
                 className="transition-all duration-200"

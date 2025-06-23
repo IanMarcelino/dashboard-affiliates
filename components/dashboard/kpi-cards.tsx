@@ -18,7 +18,7 @@ export function KPICards({ data }: KPICardsProps) {
       description: 'Total deposits from referrals',
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      change: `${data.depositChange >= 0 ? '+' : ''}${data.depositChange.toFixed(1)}%`
+      change: `${(data.depositChange ?? 0) >= 0 ? '+' : ''}${(data.depositChange ?? 0).toFixed(1)}%`
     },
     {
       title: 'CPAs',
@@ -40,7 +40,7 @@ export function KPICards({ data }: KPICardsProps) {
     },
     {
       title: 'RevShare',
-      value: `${data.revShare.toFixed(1)}%`,
+      value: `${(data.revShare ?? 0).toFixed(1)}%`,
       icon: TrendingUp,
       description: 'Revenue share percentage',
       color: 'text-purple-600',

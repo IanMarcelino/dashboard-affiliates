@@ -1,9 +1,15 @@
 'use client'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { USER_BTAG_DICT } from '@/lib/btags'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,31 +30,38 @@ export function LoginForm() {
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (error || !data?.user) {
+    if (error || !data?.session || !data.user) {
       setError('Credenciais inválidas.')
       setLoading(false)
       return
     }
 
-    const user = data.user
-    const uuid = user.id
-    const btag = USER_BTAG_DICT[uuid]
+    const token = data.session.access_token
+    const userId = data.user.id
 
-    if (!btag) {
-      setError('Este usuário não possui uma btag registrada.')
+    // ✅ Buscar btag real
+    const { data: userData, error: userFetchError } = await supabase
+      .from('user')
+      .select('btag')
+      .eq('user_id', userId)
+      .single()
+
+    if (userFetchError || !userData?.btag) {
+      setError('Não foi possível recuperar a btag.')
       setLoading(false)
       return
     }
 
-    // Armazena sessão local
+    // ✅ Salvar dados no localStorage
     localStorage.setItem('affiliate_session', JSON.stringify({
       user: {
-        id: uuid,
-        email: user.email,
-        btag,
+        email,
+        id: userId,
+        btag: userData.btag
       },
-      expires: Date.now() + 24 * 60 * 60 * 1000,
+      expires: Date.now() + 1000 * 60 * 60 * 2 // 2 horas
     }))
+    localStorage.setItem('token', token)
 
     router.push('/dashboard')
   }
@@ -73,19 +86,42 @@ export function LoginForm() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
             {error && (
               <Alert className="border-red-200 bg-red-50">
                 <AlertDescription className="text-red-700">{error}</AlertDescription>
               </Alert>
             )}
-            <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600">
-              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Entrando...</> : 'Entrar'}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                'Entrar'
+              )}
             </Button>
           </form>
         </CardContent>
