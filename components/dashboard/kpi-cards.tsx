@@ -2,8 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, Users, DollarSign, Target, PiggyBank } from 'lucide-react'
+import { TrendingUp, Users, DollarSign, Target, PiggyBank, Pencil, MousePointerClick } from 'lucide-react'
 import type { KPIData } from '@/lib/mock-data'
+import { Value } from '@radix-ui/react-select'
 
 interface KPICardsProps {
   data: KPIData
@@ -54,6 +55,24 @@ export function KPICards({ data }: KPICardsProps) {
       description: 'Estimated commission earned',
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
+      change: ''
+    },
+    {
+      title: 'Cliques',
+      value: data.cliques.toString(),
+      icon: MousePointerClick,
+      description: 'Usuários registrados',
+      color: 'text-teal-600',
+      bgColor: 'bg-teal-50',
+      change: ''
+    },
+    {
+      title: 'Registros',
+      value: data.registrations.toString(),
+      icon: Pencil,
+      description: 'Usuários registrados',
+      color: 'text-gray-600',
+      bgColor: 'bg-gray-50',
       change: ''
     }
   ]

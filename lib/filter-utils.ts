@@ -26,7 +26,9 @@ export function getFilteredDashboardData(
         cpas: 0,
         estimatedCommission: 0,
         revShare: 0,
-        depositChange: 0
+        depositChange: 0,
+        cliques: 0,
+        registrations: 0
       },
       deposits: [],
       referredUsers: []
@@ -63,6 +65,8 @@ export function getFilteredDashboardData(
   const totalCpa = filteredDeposits.reduce((sum, d) => sum + (Number(d.cpa) || 0), 0)
   const totalRev = filteredDeposits.reduce((sum, d) => sum + (Number(d.rev) || 0), 0)
   const estimatedCommission = filteredDeposits.reduce((sum, d) => sum + (Number(d.estimatedCommission) || 0), 0)
+  const totalregistros = filteredDeposits.reduce((sum, d) => sum + (Number((d as any).registrations) || 0), 0)
+  const totalCliques = filteredDeposits.reduce((sum, d) => sum + (Number((d as any).cliques) || 0), 0)
 
   // ✅ Construindo o objeto final de KPIs
   const kpi: KPIData = {
@@ -71,7 +75,9 @@ export function getFilteredDashboardData(
     cpas: totalCpa,
     estimatedCommission,
     revShare: totalRev,
-    depositChange: change
+    depositChange: change,
+    cliques: totalCliques,
+    registrations: totalregistros
   }
 
   return {

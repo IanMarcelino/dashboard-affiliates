@@ -9,8 +9,8 @@ export interface KPIData {
   revShare: number
   estimatedCommission: number
   depositChange: number
-  registros?: number
-  cliques?: number
+  registrations: number
+  cliques: number
 }
 
 export interface DailyDeposit {
@@ -104,7 +104,7 @@ export const mockAffiliateData: AffiliateData = {
     revShare: 0,
     estimatedCommission: 0,
     depositChange: 0,
-    registros: 287,
+    registrations: 287,
     cliques: 1438
   },
 
