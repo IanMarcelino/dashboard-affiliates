@@ -66,7 +66,10 @@ export function getFilteredDashboardData(
   const totalRev = filteredDeposits.reduce((sum, d) => sum + (Number(d.rev) || 0), 0)
   const estimatedCommission = filteredDeposits.reduce((sum, d) => sum + (Number(d.estimatedCommission) || 0), 0)
   const totalregistros = filteredDeposits.reduce((sum, d) => sum + (Number((d as any).registrations) || 0), 0)
-  const totalCliques = filteredDeposits.reduce((sum, d) => sum + (Number((d as any).cliques) || 0), 0)
+  // Ordena do mais recente pro mais antigo
+  const sortedByDate = [...filteredDeposits].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  // Pega o valor da última linha (mais recente)
+  const latestCliques = sortedByDate.length > 0 ? Number((sortedByDate[0] as any).cliques) || 0 : 0
 
   // ✅ Construindo o objeto final de KPIs
   const kpi: KPIData = {
@@ -76,7 +79,7 @@ export function getFilteredDashboardData(
     estimatedCommission,
     revShare: totalRev,
     depositChange: change,
-    cliques: totalCliques,
+    cliques: latestCliques,
     registrations: totalregistros
   }
 

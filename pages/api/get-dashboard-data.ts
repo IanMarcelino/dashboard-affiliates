@@ -28,7 +28,7 @@ type Deposit = {
   qftdsCpa: number
   registrations: number
   revShare: number
-  visitsUnique: number
+  cliques: number
   volume: number
   withdrawals: number
   withdrawalsAmount: number
@@ -101,7 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const valorCPA = 25
       const valorFTD = 30
 
-      const estimatedCommission = (cpa * valorCPA) + (ftds * valorFTD) + (netPL * (revPercent / 100))
+      const estimatedCommission = 0 //(cpa * valorCPA) + (ftds * valorFTD) + (netPL * (revPercent / 100))
 
       const depositsAmount = get('Deposits amount')
 
@@ -129,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         qftdsCpa: get('QFTDs CPA'),
         registrations: get('Registrations'),
         revShare: get('RevShare'),
-        visitsUnique: get('Visits (unique)'),
+        cliques: get('Visits (unique)'),
         volume: get('Volume'),
         withdrawals: get('Withdrawals'),
         withdrawalsAmount: get('Withdrawals amount'),
